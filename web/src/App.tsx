@@ -242,10 +242,22 @@ export default function App() {
     )
   }
 
+  const isMobile = () => window.innerWidth <= 720
+
   const pick = (ars: string) => {
     setSelected(ars)
     setFlyTarget({ center: data[ars].c, ts: Date.now() })
+    if (isMobile()) setPanelOpen(false)
   }
+
+  // On mobile, collapse the metric panel when a feature is selected so the detail
+  // sheet and the map aren't buried under it.
+  const handleSelect = (ars: string | null) => {
+    setSelected(ars)
+    if (ars && isMobile()) setPanelOpen(false)
+  }
+
+  const showContext = panelOpen && (metric.group === 'Mein Szenario' || metricId === 'score')
 
   const selectedEntry = selected ? getEntry(selected) : undefined
 
@@ -258,7 +270,7 @@ export default function App() {
         scale={scale}
         selected={selected}
         flyTarget={flyTarget}
-        onSelect={setSelected}
+        onSelect={handleSelect}
       />
 
       <header className="panel">
@@ -275,12 +287,16 @@ export default function App() {
         <p className="tagline">Mieten, Wohnungsmarkt & Lebensqualität in {Object.keys(data).length.toLocaleString('de-DE')} Gemeinden</p>
         <div className={`panel-scroll ${panelOpen ? '' : 'collapsed'}`}>
           <MetricPicker metricId={metricId} available={available} onChange={setMetricId} />
-          {metric.group === 'Mein Szenario' && (
-            <ScenarioPanel scenario={scenario} metricId={metricId} onChange={setScenario} />
-          )}
-          {metricId === 'score' && <WeightPanel weights={weights} onChange={setWeights} />}
-          {metricId === 'score' && <Ranking data={data} onPick={pick} />}
         </div>
+        {showContext && (
+          <div className="panel-context">
+            {metric.group === 'Mein Szenario' && (
+              <ScenarioPanel scenario={scenario} metricId={metricId} onChange={setScenario} />
+            )}
+            {metricId === 'score' && <WeightPanel weights={weights} onChange={setWeights} />}
+            {metricId === 'score' && <Ranking data={data} onPick={pick} />}
+          </div>
+        )}
         <Legend metric={metric} scale={scale} />
       </header>
 

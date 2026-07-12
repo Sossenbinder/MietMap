@@ -130,6 +130,17 @@ body {
   display: none;
 }
 
+/* Contextual sub-panel (weights / scenario inputs) — its own always-visible zone
+   between the scrolling metric list and the pinned legend, so the controls are
+   never buried below the 20+ metric buttons. */
+.panel-context {
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 44vh;
+  margin-right: -8px;
+  padding-right: 8px;
+}
+
 .metric-group {
   margin-bottom: 12px;
 }
@@ -622,23 +633,37 @@ body {
 }
 
 @media (max-width: 720px) {
+  /* Search pinned full-width at the very top; the metric panel sits below it. */
+  .topright {
+    display: block;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
   .panel {
-    width: calc(100% - 32px);
-    max-height: 45%;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100% - 88px);
   }
 
   .panel-toggle {
     display: inline-flex;
   }
 
-  .topright {
-    display: none;
+  .panel-context {
+    max-height: 38vh;
   }
 
   .detail {
     top: auto;
-    bottom: 16px;
-    width: calc(100% - 32px);
-    max-height: 40%;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 55%;
   }
 }

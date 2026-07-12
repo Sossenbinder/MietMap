@@ -166,6 +166,20 @@ export default function MapView({ data, dataK, metricId, scale, selected, flyTar
       registerLayerHandlers(map, LAYER_FILL_GEMEINDEN, SOURCE_GEMEINDEN, 'gemeinden')
       registerLayerHandlers(map, LAYER_FILL_KREISE, SOURCE_KREISE, 'kreise')
 
+      // The layer 'mousemove' doesn't fire while the map is being panned, so the tooltip
+      // would otherwise freeze mid-drag. Hide it (and clear hover) when a drag starts; it
+      // reappears on the next hover after the drag ends.
+      map.on('dragstart', () => {
+        if (hoverRef.current) {
+          map.setFeatureState(
+            { source: hoverRef.current.source, sourceLayer: hoverRef.current.sourceLayer, id: hoverRef.current.ars },
+            { hover: false },
+          )
+          hoverRef.current = null
+        }
+        tooltipRef.current!.style.display = 'none'
+      })
+
       loadedRef.current = true
       applyFeatureState(map, SOURCE_GEMEINDEN, 'gemeinden', dataRef.current)
       applyFeatureState(map, SOURCE_KREISE, 'kreise', dataKRef.current)

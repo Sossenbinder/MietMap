@@ -246,10 +246,10 @@ export const METRICS: MetricDef[] = [
   },
   {
     id: 'mietbelastung',
-    label: 'Mietbelastung',
+    label: 'Mietbelastung (Bestand)',
     unit: '%',
     group: 'Einkommen',
-    desc: 'Anteil des Pro-Kopf-Einkommens für die Bestandsmiete einer 70-m²-Wohnung',
+    desc: 'Bestandsmiete (70 m²) im Verhältnis zum örtlichen Pro-Kopf-Einkommen. Einkommensstarke Städte wirken dadurch moderat; Neuvermietungen liegen deutlich höher — für eine persönliche Rechnung siehe „Mein Szenario → Deine Mietbelastung".',
     palette: ORRD,
     lowLabel: 'gering',
     highLabel: 'hoch',
