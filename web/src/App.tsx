@@ -3,6 +3,7 @@ import DetailPanel from './components/DetailPanel'
 import Legend from './components/Legend'
 import MetricPicker from './components/MetricPicker'
 import Ranking from './components/Ranking'
+import ScenarioIntro from './components/ScenarioIntro'
 import ScenarioPanel, { type Scenario } from './components/ScenarioPanel'
 import SearchBox from './components/SearchBox'
 import WeightPanel, { type Weights } from './components/WeightPanel'
@@ -13,6 +14,7 @@ import { computeScale } from './scale'
 import type { Dataset, Gemeinde } from './types'
 
 const SCENARIO_STORAGE_KEY = 'mietmap.scenario'
+const INTRO_SEEN_KEY = 'mietmap.introSeen'
 const DEFAULT_SCENARIO: Scenario = {
   m2: 70,
   income: 2800,
@@ -142,6 +144,35 @@ export default function App() {
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; ts: number } | null>(null)
   const [weights, setWeights] = useState<Weights>([33, 33, 33])
   const [scenario, setScenario] = useState<Scenario>(initialScenario)
+  const [introOpen, setIntroOpen] = useState(() => {
+    try {
+      return !localStorage.getItem(INTRO_SEEN_KEY)
+    } catch {
+      return false
+    }
+  })
+
+  const markIntroSeen = () => {
+    try {
+      localStorage.setItem(INTRO_SEEN_KEY, '1')
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const applyIntro = (patch: Partial<Scenario>) => {
+    setScenario((s) => ({ ...s, ...patch }))
+    // land on a personalized layer so the entered numbers are immediately visible,
+    // unless the user is already looking at one of the scenario layers
+    setMetricId((mid) => (metricById(mid).group === 'Mein Szenario' ? mid : 'belastung_pers'))
+    setIntroOpen(false)
+    markIntroSeen()
+  }
+
+  const closeIntro = () => {
+    setIntroOpen(false)
+    markIntroSeen()
+  }
 
   // Kreis ars codes are 5 digits (a prefix of the 12-digit Gemeinde ars); Gemeinde/Kreis ids never collide.
   function getEntry(ars: string): Gemeinde | undefined {
@@ -286,6 +317,11 @@ export default function App() {
           </button>
         </div>
         <p className="tagline">Mieten, Wohnungsmarkt & Lebensqualität in {Object.keys(data).length.toLocaleString('de-DE')} Gemeinden</p>
+        {panelOpen && (
+          <button className="scenario-launch" onClick={() => setIntroOpen(true)}>
+            🏠 Meine Angaben (Wohnung &amp; Einkommen)
+          </button>
+        )}
         <div className={`panel-scroll ${panelOpen ? '' : 'collapsed'}`}>
           <MetricPicker metricId={metricId} available={available} onChange={setMetricId} />
         </div>
@@ -313,6 +349,8 @@ export default function App() {
       {selected && selectedEntry && (
         <DetailPanel gemeinde={selectedEntry} ars={selected} onClose={() => setSelected(null)} />
       )}
+
+      {introOpen && <ScenarioIntro scenario={scenario} onApply={applyIntro} onClose={closeIntro} />}
     </div>
   )
 }

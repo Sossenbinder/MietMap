@@ -171,6 +171,107 @@ body {
   margin-bottom: 6px;
 }
 
+.scenario-launch {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(29, 78, 216, 0.35);
+  border-radius: 10px;
+  background: rgba(29, 78, 216, 0.09);
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.scenario-launch:hover {
+  background: rgba(29, 78, 216, 0.16);
+}
+
+/* ---------- onboarding / scenario modal ---------- */
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  position: relative;
+  width: 380px;
+  max-width: 100%;
+  max-height: calc(100% - 40px);
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  animation: slidein 0.18s ease-out;
+}
+
+.modal h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  padding-right: 24px;
+}
+
+.modal-intro {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0 18px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-primary,
+.modal-secondary {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.modal-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.modal-primary:hover {
+  background: #1b45c0;
+}
+
+.modal-secondary {
+  background: none;
+  color: var(--text-dim);
+}
+
+.modal-secondary:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
 .metric-group-hint {
   font-size: 11.5px;
   line-height: 1.4;
