@@ -16,6 +16,11 @@ export default function MetricPicker({ metricId, available, onChange }: Props) {
         return (
           <div key={group} className="metric-group">
             <div className="metric-group-title">{group}</div>
+            {group === 'Mein Szenario' && (
+              <div className="metric-group-hint">
+                Kennzahl wählen, dann Wohnungsgröße, Einkommen &amp; Finanzierung unten eingeben.
+              </div>
+            )}
             {metrics.map((m) => (
               <button
                 key={m.id}

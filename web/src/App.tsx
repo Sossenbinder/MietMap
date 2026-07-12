@@ -276,6 +276,7 @@ export default function App() {
       <header className="panel">
         <div className="panel-header">
           <h1>Mietmap</h1>
+          {!panelOpen && <span className="panel-active-metric">{metric.label}</span>}
           <button
             className="panel-toggle"
             aria-label="Kennzahlen ein-/ausklappen"
@@ -297,7 +298,9 @@ export default function App() {
             {metricId === 'score' && <Ranking data={data} onPick={pick} />}
           </div>
         )}
-        <Legend metric={metric} scale={scale} />
+        <div className={`panel-legend ${panelOpen ? '' : 'collapsed'}`}>
+          <Legend metric={metric} scale={scale} />
+        </div>
       </header>
 
       <div className="topright">
