@@ -1,9 +1,11 @@
+import { STRINGS, useT } from '../i18n'
+
 export type Weights = [number, number, number]
 
-const SLIDERS: { label: string; idx: 0 | 1 | 2 }[] = [
-  { label: 'Bezahlbarkeit', idx: 0 },
-  { label: 'Marktentspannung', idx: 1 },
-  { label: 'Nahversorgung', idx: 2 },
+const SLIDERS: { key: keyof typeof STRINGS; idx: 0 | 1 | 2 }[] = [
+  { key: 'wAfford', idx: 0 },
+  { key: 'wMarket', idx: 1 },
+  { key: 'wAmenities', idx: 2 },
 ]
 
 interface Props {
@@ -12,13 +14,14 @@ interface Props {
 }
 
 export default function WeightPanel({ weights, onChange }: Props) {
+  const t = useT()
   return (
     <div className="weight-panel">
-      <div className="metric-group-title">Gewichtung</div>
-      {SLIDERS.map(({ label, idx }) => (
+      <div className="metric-group-title">{t('weightsTitle')}</div>
+      {SLIDERS.map(({ key, idx }) => (
         <div key={idx} className="weight-row">
           <div className="weight-row-label">
-            <span>{label}</span>
+            <span>{t(key)}</span>
             <span className="weight-row-value">{weights[idx]}</span>
           </div>
           <input

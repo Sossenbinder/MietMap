@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
+import { STRINGS, useLang } from '../i18n'
 import { SCENARIO_METRIC_IDS, fmtMetric, metricById, scenarioBoundPrefix } from '../metrics'
 import { fillColorExpression, type Scale } from '../scale'
 import type { Dataset } from '../types'
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export default function MapView({ data, dataK, metricId, scale, selected, flyTarget, onSelect }: Props) {
+  const { lang } = useLang()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const loadedRef = useRef(false)
@@ -45,6 +47,8 @@ export default function MapView({ data, dataK, metricId, scale, selected, flyTar
   dataKRef.current = dataK
   const scaleRef = useRef(scale)
   scaleRef.current = scale
+  const langRef = useRef(lang)
+  langRef.current = lang
 
   useEffect(() => {
     const map = new maplibregl.Map({
@@ -206,11 +210,13 @@ export default function MapView({ data, dataK, metricId, scale, selected, flyTar
         if (g) {
           const m = metricById(metricRef.current)
           const v = g.m[metricRef.current]
+          const currentLang = langRef.current
           const geqPrefix =
             g.geq && SCENARIO_METRIC_IDS.has(metricRef.current) ? scenarioBoundPrefix(metricRef.current) : ''
+          const kreiswertSuffix = g.k?.includes(metricRef.current) ? ` · ${STRINGS.kreiswert[currentLang]}` : ''
           tip.innerHTML =
             `<strong>${g.n}</strong>` +
-            `<span>${v != null ? geqPrefix + fmtMetric(v, m) : 'keine Daten'}${g.k?.includes(metricRef.current) ? ' · Kreiswert' : ''}</span>`
+            `<span>${v != null ? geqPrefix + fmtMetric(v, m, currentLang) : STRINGS.noData[currentLang]}${kreiswertSuffix}</span>`
           tip.style.display = 'block'
           tip.style.transform = `translate(${e.point.x + 14}px, ${e.point.y + 14}px)`
         }

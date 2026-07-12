@@ -1,3 +1,5 @@
+import { useT } from '../i18n'
+
 export interface Scenario {
   m2: number
   income: number
@@ -19,15 +21,16 @@ interface Props {
 }
 
 export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
+  const t = useT()
   const showBau = metricId === 'kauf_monat' || metricId === 'kauf_vs_miete'
 
   return (
     <div className="scenario-panel">
-      <div className="metric-group-title">Szenario anpassen</div>
+      <div className="metric-group-title">{t('scenarioAdjust')}</div>
 
       <div className="scenario-row">
         <div className="scenario-row-label">
-          <span>Wohnungsgröße</span>
+          <span>{t('sFlatSize')}</span>
           <span className="scenario-row-value">{scenario.m2} m²</span>
         </div>
         <input
@@ -42,7 +45,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
       <div className="scenario-row">
         <div className="scenario-row-label">
-          <span>Nettoeinkommen</span>
+          <span>{t('sIncome')}</span>
         </div>
         <div className="scenario-income-input">
           <input
@@ -65,35 +68,30 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
           className={`metric-btn ${scenario.basis === 'bestand' ? 'active' : ''}`}
           onClick={() => onChange({ ...scenario, basis: 'bestand' })}
         >
-          Bestandsmiete
+          {t('sExisting')}
         </button>
         <button
           className={`metric-btn ${scenario.basis === 'neu' ? 'active' : ''}`}
           onClick={() => onChange({ ...scenario, basis: 'neu' })}
         >
-          Neuvermietung
+          {t('sNew')}
         </button>
       </div>
 
-      {scenario.basis === 'neu' && (
-        <div className="legend-note">
-          Neuvermietung basiert auf Kreis-Klassenmitten (BBSR); in Hochpreis-Kreisen (Klasse „11,50 € und mehr“) ist
-          die echte Miete meist höher.
-        </div>
-      )}
+      {scenario.basis === 'neu' && <div className="legend-note">{t('sNewHint')}</div>}
 
       <div className="scenario-toggle">
         <button
           className={`metric-btn ${!scenario.warm ? 'active' : ''}`}
           onClick={() => onChange({ ...scenario, warm: false })}
         >
-          Kaltmiete
+          {t('sCold')}
         </button>
         <button
           className={`metric-btn ${scenario.warm ? 'active' : ''}`}
           onClick={() => onChange({ ...scenario, warm: true })}
         >
-          Warmmiete
+          {t('sWarm')}
         </button>
       </div>
 
@@ -101,7 +99,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
         <>
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Nebenkosten-Pauschale</span>
+              <span>{t('sNkFlat')}</span>
               <span className="scenario-row-value">{scenario.nk.toFixed(1)} €/m²</span>
             </div>
             <input
@@ -113,17 +111,17 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
               onChange={(e) => onChange({ ...scenario, nk: Number(e.target.value) })}
             />
           </div>
-          <div className="legend-note">Warmmiete = Kaltmiete + Pauschale; Angaben ohne Heizkosten-Garantie.</div>
+          <div className="legend-note">{t('sWarmHint')}</div>
         </>
       )}
 
       {showBau && (
         <>
-          <div className="metric-group-title scenario-subtitle">Bauen & Finanzierung</div>
+          <div className="metric-group-title scenario-subtitle">{t('sBauTitle')}</div>
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Grundstück</span>
+              <span>{t('sPlot')}</span>
               <span className="scenario-row-value">{scenario.plot} m²</span>
             </div>
             <input
@@ -138,7 +136,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Baukosten</span>
+              <span>{t('sBuildCost')}</span>
               <span className="scenario-row-value">{scenario.baukosten} €/m²</span>
             </div>
             <input
@@ -153,7 +151,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Eigenkapital</span>
+              <span>{t('sEquity')}</span>
             </div>
             <div className="scenario-income-input">
               <input
@@ -173,7 +171,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Zins</span>
+              <span>{t('sRate')}</span>
               <span className="scenario-row-value">{scenario.zins.toFixed(1)} %</span>
             </div>
             <input
@@ -188,8 +186,10 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Laufzeit</span>
-              <span className="scenario-row-value">{scenario.jahre} Jahre</span>
+              <span>{t('sTerm')}</span>
+              <span className="scenario-row-value">
+                {scenario.jahre} {t('sYears')}
+              </span>
             </div>
             <input
               type="range"
@@ -203,7 +203,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
           <div className="scenario-row">
             <div className="scenario-row-label">
-              <span>Kaufnebenkosten</span>
+              <span>{t('sBuyCosts')}</span>
               <span className="scenario-row-value">{scenario.nebenkosten.toFixed(1)} %</span>
             </div>
             <input
@@ -216,10 +216,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
             />
           </div>
 
-          <div className="legend-note">
-            Modell: Neubau auf gekauftem Grundstück. Echte Kaufpreise für Bestandsimmobilien sind nicht frei
-            verfügbar.
-          </div>
+          <div className="legend-note">{t('sBauHint')}</div>
         </>
       )}
     </div>

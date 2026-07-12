@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { useT } from '../i18n'
 import type { Dataset } from '../types'
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function SearchBox({ data, onPick }: Props) {
+  const t = useT()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -31,7 +33,7 @@ export default function SearchBox({ data, onPick }: Props) {
       <input
         ref={inputRef}
         value={q}
-        placeholder="Gemeinde suchen …"
+        placeholder={t('searchPlaceholder')}
         onChange={(e) => {
           setQ(e.target.value)
           setOpen(true)

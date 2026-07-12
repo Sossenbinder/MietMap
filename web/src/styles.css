@@ -104,6 +104,43 @@ body {
   color: var(--text-dim);
 }
 
+.lang-toggle {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lang-btn {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.lang-btn + .lang-btn {
+  border-left: 1px solid var(--border);
+}
+
+.lang-btn.active {
+  background: rgba(29, 78, 216, 0.12);
+  color: var(--accent);
+}
+
+.lang-btn:hover:not(.active) {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
+}
+
 .panel-toggle {
   display: none;
   align-items: center;

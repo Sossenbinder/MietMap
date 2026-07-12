@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useLang, useT } from '../i18n'
 import { fmtNumber } from '../metrics'
 import type { Dataset } from '../types'
 
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default function Ranking({ data, onPick }: Props) {
+  const { lang } = useLang()
+  const t = useT()
   const top = useMemo(() => {
     return Object.entries(data)
       .filter(([, g]) => g.e >= MIN_EINWOHNER && g.m.score != null)
@@ -19,14 +22,14 @@ export default function Ranking({ data, onPick }: Props) {
 
   return (
     <div className="ranking">
-      <div className="metric-group-title">Top 10</div>
+      <div className="metric-group-title">{t('rankingTitle')}</div>
       <ol className="ranking-list">
         {top.map(([ars, g], i) => (
           <li key={ars}>
             <button onClick={() => onPick(ars)}>
               <span className="ranking-rank">{i + 1}</span>
               <span className="ranking-name">{g.n}</span>
-              <span className="ranking-score">{fmtNumber(g.m.score, 1)}</span>
+              <span className="ranking-score">{fmtNumber(g.m.score, 1, lang)}</span>
             </button>
           </li>
         ))}

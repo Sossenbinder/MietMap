@@ -1,4 +1,5 @@
-import { METRICS } from '../metrics'
+import { useLang, useT } from '../i18n'
+import { GROUP_LABELS, GROUP_ORDER, METRICS } from '../metrics'
 
 interface Props {
   metricId: string
@@ -7,29 +8,26 @@ interface Props {
 }
 
 export default function MetricPicker({ metricId, available, onChange }: Props) {
-  const groups = [...new Set(METRICS.map((m) => m.group))]
+  const { lang } = useLang()
+  const t = useT()
   return (
     <div className="metric-picker">
-      {groups.map((group) => {
+      {GROUP_ORDER.map((group) => {
         const metrics = METRICS.filter((m) => m.group === group && available.has(m.id))
         if (!metrics.length) return null
         return (
           <div key={group} className="metric-group">
-            <div className="metric-group-title">{group}</div>
-            {group === 'Mein Szenario' && (
-              <div className="metric-group-hint">
-                Kennzahl wählen, dann Wohnungsgröße, Einkommen &amp; Finanzierung unten eingeben.
-              </div>
-            )}
+            <div className="metric-group-title">{GROUP_LABELS[group][lang]}</div>
+            {group === 'scenario' && <div className="metric-group-hint">{t('scenarioHint')}</div>}
             {metrics.map((m) => (
               <button
                 key={m.id}
                 className={`metric-btn ${m.id === metricId ? 'active' : ''}`}
                 onClick={() => onChange(m.id)}
-                title={m.desc}
+                title={m.desc[lang]}
               >
                 <span className="metric-swatch" style={{ background: m.palette[4] }} />
-                {m.label}
+                {m.label[lang]}
               </button>
             ))}
           </div>

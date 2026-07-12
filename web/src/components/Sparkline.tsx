@@ -1,3 +1,4 @@
+import type { Lang } from '../i18n'
 import { fmtNumber } from '../metrics'
 
 const WIDTH = 260
@@ -7,9 +8,10 @@ const PAD_Y = 4
 interface Props {
   /** Ascending [year, value] pairs. */
   data: [number, number][]
+  lang: Lang
 }
 
-export default function Sparkline({ data }: Props) {
+export default function Sparkline({ data, lang }: Props) {
   if (data.length < 2) return null
 
   const values = data.map(([, v]) => v)
@@ -31,8 +33,8 @@ export default function Sparkline({ data }: Props) {
   return (
     <div className="sparkline">
       <div className="sparkline-labels">
-        <span>{fmtNumber(min, 0)} €/m²</span>
-        <span>{fmtNumber(max, 0)} €/m²</span>
+        <span>{fmtNumber(min, 0, lang)} €/m²</span>
+        <span>{fmtNumber(max, 0, lang)} €/m²</span>
       </div>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width={WIDTH} height={HEIGHT} className="sparkline-svg">
         <polyline

@@ -8,6 +8,7 @@ import ScenarioPanel, { type Scenario } from './components/ScenarioPanel'
 import SearchBox from './components/SearchBox'
 import WeightPanel, { type Weights } from './components/WeightPanel'
 import MapView from './map/MapView'
+import { localeOf, useLang, useT } from './i18n'
 import { METRICS, metricById } from './metrics'
 import { mapDataset, recomputeScenario, recomputeScore } from './recompute'
 import { computeScale } from './scale'
@@ -131,6 +132,8 @@ const initialScenario: Scenario = {
 }
 
 export default function App() {
+  const { lang, setLang } = useLang()
+  const t = useT()
   const [data, setData] = useState<Dataset | null>(null)
   // Kreis-level overlay for low zoom; defaults to "loaded but empty" so a missing/failed fetch
   // degrades to simply no Kreis layer instead of blocking or crashing the rest of the app.
@@ -164,7 +167,7 @@ export default function App() {
     setScenario((s) => ({ ...s, ...patch }))
     // land on a personalized layer so the entered numbers are immediately visible,
     // unless the user is already looking at one of the scenario layers
-    setMetricId((mid) => (metricById(mid).group === 'Mein Szenario' ? mid : 'belastung_pers'))
+    setMetricId((mid) => (metricById(mid).group === 'scenario' ? mid : 'belastung_pers'))
     setIntroOpen(false)
     markIntroSeen()
   }
@@ -268,7 +271,7 @@ export default function App() {
     return (
       <div className="loading">
         <div className="loading-pulse" />
-        Lade Daten …
+        {t('loading')}
       </div>
     )
   }
@@ -288,7 +291,7 @@ export default function App() {
     if (ars && isMobile()) setPanelOpen(false)
   }
 
-  const showContext = panelOpen && (metric.group === 'Mein Szenario' || metricId === 'score')
+  const showContext = panelOpen && (metric.group === 'scenario' || metricId === 'score')
 
   const selectedEntry = selected ? getEntry(selected) : undefined
 
@@ -307,19 +310,25 @@ export default function App() {
       <header className="panel">
         <div className="panel-header">
           <h1>Mietmap</h1>
-          {!panelOpen && <span className="panel-active-metric">{metric.label}</span>}
-          <button
-            className="panel-toggle"
-            aria-label="Kennzahlen ein-/ausklappen"
-            onClick={() => setPanelOpen((v) => !v)}
-          >
+          <div className="lang-toggle">
+            <button className={`lang-btn ${lang === 'de' ? 'active' : ''}`} onClick={() => setLang('de')}>
+              DE
+            </button>
+            <button className={`lang-btn ${lang === 'en' ? 'active' : ''}`} onClick={() => setLang('en')}>
+              EN
+            </button>
+          </div>
+          {!panelOpen && <span className="panel-active-metric">{metric.label[lang]}</span>}
+          <button className="panel-toggle" aria-label={t('panelToggle')} onClick={() => setPanelOpen((v) => !v)}>
             {panelOpen ? '▾' : '▸'}
           </button>
         </div>
-        <p className="tagline">Mieten, Wohnungsmarkt & Lebensqualität in {Object.keys(data).length.toLocaleString('de-DE')} Gemeinden</p>
+        <p className="tagline">
+          {t('tagline').replace('{n}', Object.keys(data).length.toLocaleString(localeOf(lang)))}
+        </p>
         {panelOpen && (
           <button className="scenario-launch" onClick={() => setIntroOpen(true)}>
-            🏠 Meine Angaben (Wohnung &amp; Einkommen)
+            {t('myDetails')}
           </button>
         )}
         <div className={`panel-scroll ${panelOpen ? '' : 'collapsed'}`}>
@@ -327,7 +336,7 @@ export default function App() {
         </div>
         {showContext && (
           <div className="panel-context">
-            {metric.group === 'Mein Szenario' && (
+            {metric.group === 'scenario' && (
               <ScenarioPanel scenario={scenario} metricId={metricId} onChange={setScenario} />
             )}
             {metricId === 'score' && <WeightPanel weights={weights} onChange={setWeights} />}
