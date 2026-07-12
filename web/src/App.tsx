@@ -138,6 +138,7 @@ export default function App() {
     initialMetric && METRICS.some((m) => m.id === initialMetric) ? initialMetric : 'qm_miete',
   )
   const [selected, setSelected] = useState<string | null>(() => initialArs || null)
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 720)
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; ts: number } | null>(null)
   const [weights, setWeights] = useState<Weights>([33, 33, 33])
   const [scenario, setScenario] = useState<Scenario>(initialScenario)
@@ -261,14 +262,25 @@ export default function App() {
       />
 
       <header className="panel">
-        <h1>Mietmap</h1>
+        <div className="panel-header">
+          <h1>Mietmap</h1>
+          <button
+            className="panel-toggle"
+            aria-label="Kennzahlen ein-/ausklappen"
+            onClick={() => setPanelOpen((v) => !v)}
+          >
+            {panelOpen ? '▾' : '▸'}
+          </button>
+        </div>
         <p className="tagline">Mieten, Wohnungsmarkt & Lebensqualität in {Object.keys(data).length.toLocaleString('de-DE')} Gemeinden</p>
-        <MetricPicker metricId={metricId} available={available} onChange={setMetricId} />
-        {metric.group === 'Mein Szenario' && (
-          <ScenarioPanel scenario={scenario} metricId={metricId} onChange={setScenario} />
-        )}
-        {metricId === 'score' && <WeightPanel weights={weights} onChange={setWeights} />}
-        {metricId === 'score' && <Ranking data={data} onPick={pick} />}
+        <div className={`panel-scroll ${panelOpen ? '' : 'collapsed'}`}>
+          <MetricPicker metricId={metricId} available={available} onChange={setMetricId} />
+          {metric.group === 'Mein Szenario' && (
+            <ScenarioPanel scenario={scenario} metricId={metricId} onChange={setScenario} />
+          )}
+          {metricId === 'score' && <WeightPanel weights={weights} onChange={setWeights} />}
+          {metricId === 'score' && <Ranking data={data} onPick={pick} />}
+        </div>
         <Legend metric={metric} scale={scale} />
       </header>
 

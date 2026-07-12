@@ -50,10 +50,12 @@ curl -LO https://download.geofabrik.de/europe/germany-latest.osm.pbf
 cd ..
 
 .venv/bin/python extract_zensus.py           # Zensus-XLSX → CSV
-.venv/bin/python extract_deutschlandatlas.py # Einkommen + Angebotsmiete-Klassen → CSV
-.venv/bin/python build_geometry.py           # Shapefile → GeoJSONL → PMTiles
+.venv/bin/python extract_deutschlandatlas.py # Einkommen, Angebotsmiete-Klassen, Sicherheit/QoL → CSV
+.venv/bin/python extract_bauland.py          # Baulandpreise (neuestes Jahr je Kreis) + Historie
+.venv/bin/python extract_erreichbarkeit.py   # Fahrzeiten zu Mittel-/Oberzentren → CSV
+.venv/bin/python build_geometry.py           # Shapefiles → GeoJSONL → PMTiles (Gemeinden + Kreise)
 .venv/bin/python build_amenities.py          # OSM-POIs → Dichten je Gemeinde (~2 min)
-.venv/bin/python build_metrics.py            # Join + Gesamtindex → metrics.json
+.venv/bin/python build_metrics.py            # Join + Gesamtindex → metrics.json + metrics_kreise.json
 ```
 
 Die Deutschlandatlas-CSVs (`deutschlandatlas_krs1224.csv`, `deutschlandatlas_krs1222.csv`)
@@ -73,6 +75,21 @@ npm run build    # statisches Bundle in dist/
 
 Hosting: beliebiger statischer Host mit HTTP-Range-Request-Unterstützung für
 PMTiles (z. B. Cloudflare Pages).
+
+## Bekannte Grenzen des Modells
+
+- **Klumpenrisiko**: Beschäftigungs- und Einkommensdaten zeigen nicht, ob eine
+  Region an einem einzelnen Arbeitgeber hängt (Wolfsburg/VW-Problem). Aus freien
+  Daten nicht ableitbar.
+- **Speckgürtel**: Kreis-Kennzahlen (Einkommen, Angebotsmieten, Sicherheit)
+  verwischen Stadt-Umland-Unterschiede; die Fahrzeit-Layer mildern das nur teilweise.
+- **Angebotsmieten als Klassenmitten**: in der offenen Spitzenklasse systematisch
+  unterschätzt — deshalb wird der Miet-Gap dort unterdrückt und Szenariowerte
+  tragen eine „≥"/„≤"-Markierung.
+- **OSM-Vollständigkeit**: Nahversorgungsdichten hängen von der Kartierungsqualität
+  ab; Gemeinden ohne erfasste POIs zeigen bewusst „keine Daten" statt Null.
+- **Kleine Gemeinden**: Pro-Kopf-Raten können bei sehr geringer Einwohnerzahl
+  extreme Werte annehmen (ein Bushalt in einem 24-Einwohner-Ort).
 
 ## Offen
 

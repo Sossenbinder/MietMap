@@ -68,7 +68,8 @@ body {
   left: 16px;
   width: 320px;
   max-height: calc(100% - 32px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--panel);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
@@ -77,10 +78,37 @@ body {
   padding: 20px;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .panel h1 {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.panel-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  flex: none;
+}
+
+.panel-toggle:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
 }
 
 .tagline {
@@ -88,6 +116,18 @@ body {
   font-size: 12.5px;
   margin: 4px 0 16px;
   line-height: 1.45;
+}
+
+.panel-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  margin-right: -8px;
+  padding-right: 8px;
+}
+
+.panel-scroll.collapsed {
+  display: none;
 }
 
 .metric-group {
@@ -475,16 +515,43 @@ body {
   text-align: right;
 }
 
-.badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(217, 119, 6, 0.12);
+.kreis-mark {
+  margin-left: 1px;
   color: #b45309;
-  font-size: 10px;
-  font-weight: 600;
-  vertical-align: 1px;
+  font-weight: 700;
+}
+
+.score-breakdown {
+  margin-top: 6px;
+}
+
+.score-breakdown-row {
+  padding: 4.5px 0;
+}
+
+.score-breakdown-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+.score-bar-track {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.score-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.score-breakdown-value {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 3px;
 }
 
 .detail-close {
@@ -560,6 +627,10 @@ body {
     max-height: 45%;
   }
 
+  .panel-toggle {
+    display: inline-flex;
+  }
+
   .topright {
     display: none;
   }
@@ -568,6 +639,6 @@ body {
     top: auto;
     bottom: 16px;
     width: calc(100% - 32px);
-    max-height: 45%;
+    max-height: 40%;
   }
 }

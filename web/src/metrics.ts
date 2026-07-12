@@ -18,8 +18,8 @@ const ORRD = ['#fef0d9', '#fdd49e', '#fdbb84', '#fc8d59', '#ef6548', '#d7301f', 
 const GNBU = ['#f0f9e8', '#ccebc5', '#a8ddb5', '#7bccc4', '#4eb3d3', '#2b8cbe', '#08589e']
 const GREENS = ['#edf8e9', '#c7e9c0', '#a1d99b', '#74c476', '#41ab5d', '#238b45', '#005a32']
 const BUPU = ['#f7fcfd', '#e0ecf4', '#bfd3e6', '#9ebcda', '#8c96c6', '#8856a7', '#810f7c']
-const RDYLGN = ['#d73027', '#fc8d59', '#fee08b', '#ffffbf', '#d9ef8b', '#91cf60', '#1a9850']
-const RDYLGN_REV = [...RDYLGN].reverse()
+const RDYLBU = ['#d73027', '#fc8d59', '#fee090', '#ffffbf', '#e0f3f8', '#91bfdb', '#4575b4']
+const RDYLBU_REV = [...RDYLBU].reverse()
 const RDBU = ['#2166ac', '#67a9cf', '#d1e5f0', '#f7f7f7', '#fddbc7', '#ef8a62', '#b2182b']
 
 /** Metric ids computed client-side from the "Mein Szenario" panel state. */
@@ -88,6 +88,18 @@ export const METRICS: MetricDef[] = [
     lowLabel: 'Bestand teurer',
     highLabel: 'Angebot teurer',
     decimals: 2,
+  },
+  {
+    id: 'bev_entw',
+    label: 'Bevölkerungsentwicklung',
+    unit: '% p. a.',
+    group: 'Miete & Markt',
+    desc: 'Durchschnittliche jährliche Bevölkerungsentwicklung 2019–2024 (Deutschlandatlas, Gemeindeebene)',
+    palette: [...RDBU].reverse(),
+    lowLabel: 'schrumpft',
+    highLabel: 'wächst',
+    decimals: 2,
+    breaks: [-2, -1, -0.5, 0, 0.5, 1, 2],
   },
   {
     id: 'amenities_1k',
@@ -249,7 +261,7 @@ export const METRICS: MetricDef[] = [
     unit: '/ 100',
     group: 'Gesamt',
     desc: 'Kombiniert Bezahlbarkeit, Marktentspannung und Nahversorgung (Perzentil-Mittel)',
-    palette: RDYLGN,
+    palette: RDYLBU,
     lowLabel: 'ungünstig',
     highLabel: 'attraktiv',
     decimals: 0,
@@ -271,7 +283,7 @@ export const METRICS: MetricDef[] = [
     unit: '%',
     group: 'Mein Szenario',
     desc: 'Anteil deines Nettoeinkommens für die Kaltmiete — ab 30 % gilt Wohnen als teuer',
-    palette: RDYLGN_REV,
+    palette: RDYLBU_REV,
     lowLabel: 'leistbar',
     highLabel: 'überlastet',
     decimals: 1,
@@ -283,7 +295,7 @@ export const METRICS: MetricDef[] = [
     unit: '€/Monat',
     group: 'Mein Szenario',
     desc: 'Nettoeinkommen minus Kaltmiete',
-    palette: RDYLGN,
+    palette: RDYLBU,
     lowLabel: 'wenig übrig',
     highLabel: 'viel übrig',
     decimals: 0,

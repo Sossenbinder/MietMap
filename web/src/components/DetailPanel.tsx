@@ -11,6 +11,12 @@ interface Props {
 
 type BaulandHistory = Record<string, [number, number][]>
 
+const SCORE_COMPONENTS: { label: string; idx: 0 | 1 | 2 }[] = [
+  { label: 'Bezahlbarkeit', idx: 0 },
+  { label: 'Marktentspannung', idx: 1 },
+  { label: 'Nahversorgung', idx: 2 },
+]
+
 // fetched lazily, once, and cached across every DetailPanel mount
 let baulandHistoryPromise: Promise<BaulandHistory> | null = null
 function loadBaulandHistory(): Promise<BaulandHistory> {
@@ -63,17 +69,36 @@ export default function DetailPanel({ gemeinde: g, ars, onClose }: Props) {
                     {g.geq && SCENARIO_METRIC_IDS.has(m.id) ? scenarioBoundPrefix(m.id) : ''}
                     {fmtMetric(g.m[m.id], m)}
                     {g.k?.includes(m.id) && (
-                      <span className="badge" title="Für diese Gemeinde liegt kein eigener Wert vor; angezeigt wird der Wert des Kreises.">
-                        Kreiswert
-                      </span>
+                      <sup className="kreis-mark" title="Kreiswert — kein gemeindespezifischer Wert verfügbar">
+                        °
+                      </sup>
                     )}
                   </dd>
                 </div>
               ))}
             </dl>
+            {group === 'Gesamt' && g.p && (
+              <div className="score-breakdown">
+                {SCORE_COMPONENTS.map(({ label, idx }) => {
+                  const p = g.p?.[idx]
+                  if (p == null) return null
+                  return (
+                    <div key={label} className="score-breakdown-row">
+                      <div className="score-breakdown-label">{label}</div>
+                      <div className="score-bar-track">
+                        <div className="score-bar" style={{ width: `${p * 100}%` }} />
+                      </div>
+                      <div className="score-breakdown-value">besser als {Math.round(p * 100)} %</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </section>
         )
       })}
+
+      {g.k && g.k.length > 0 && <div className="legend-note">° Kreiswert — kein gemeindespezifischer Wert</div>}
 
       {baulandSeries && baulandSeries.length > 1 && (
         <section>

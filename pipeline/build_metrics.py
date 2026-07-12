@@ -40,6 +40,7 @@ DEUTSCHLANDATLAS_METRICS = ["einkommen", "angebotsmiete", "miet_gap", "mietbelas
 DEUTSCHLANDATLAS_EXTRA_METRICS = ["straft", "einbr", "alq", "v_harzt", "kbtr_pers"]
 BAULAND_METRICS = ["bauland"]
 ERREICHBARKEIT_METRICS = ["fz_mz", "fz_oz"]
+BEV_METRICS = ["bev_entw"]
 
 
 def load_gemeinden() -> pd.DataFrame:
@@ -112,11 +113,22 @@ def build_kreise(
     for m in ERREICHBARKEIT_METRICS:
         kdf[m] = kdf.index.map(erreichbarkeit[m])
 
+    # Population trend: EWZ-weighted mean of the Gemeinde-level values
+    weight_bev = gem_df["ewz"].where(gem_df["bev_entw"].notna())
+    kdf["bev_entw"] = kdf.index.map(
+        (gem_df["bev_entw"] * gem_df["ewz"]).groupby(gem_df["kreis_key"]).sum()
+        / weight_bev.groupby(gem_df["kreis_key"]).sum()
+    ).round(2)
+
     if has_amenities:
         weight = gem_df["ewz"]
         for m in AMENITY_METRICS + ["amenities_1k"]:
+            # Gemeinden with no amenities.csv row (NaN rate) must not count toward the
+            # weight sum either, or their population dilutes the rate of the Gemeinden
+            # that do have data.
+            valid_weight = weight.where(gem_df[m].notna())
             weighted_sum = (gem_df[m] * weight).groupby(gem_df["kreis_key"]).sum()
-            weight_sum = weight.groupby(gem_df["kreis_key"]).sum()
+            weight_sum = valid_weight.groupby(gem_df["kreis_key"]).sum()
             kdf[m] = kdf.index.map(weighted_sum / weight_sum)
 
     pct_affordability = 1 - kdf["qm_miete"].rank(pct=True)
@@ -125,7 +137,7 @@ def build_kreise(
     parts = [pct_affordability, pct_market]
     if has_amenities:
         parts.append(pct_amenities)
-    kdf["score"] = (sum(parts) / len(parts) * 100).round(1)
+    kdf["score"] = (pd.concat(parts, axis=1).mean(axis=1) * 100).round(1)
     kdf["p_affordability"] = pct_affordability.round(3)
     kdf["p_market"] = pct_market.round(3)
     kdf["p_amenities"] = pct_amenities.round(3)
@@ -137,6 +149,7 @@ def build_kreise(
         + DEUTSCHLANDATLAS_EXTRA_METRICS
         + BAULAND_METRICS
         + ERREICHBARKEIT_METRICS
+        + BEV_METRICS
         + ["score"]
     )
     out: dict[str, dict] = {}
@@ -161,6 +174,12 @@ def main() -> None:
     kreise = pd.read_csv(OUT / "zensus_kreise.csv", dtype={"ars": str}).set_index("ars")
 
     df = gem.merge(zensus.drop(columns="name"), on="ars", how="left")
+
+    # Drop "gemeindefreie Gebiete" (uninhabited land, e.g. large forests) -- ewz == 0
+    # means amenity rates and percentile ranks are meaningless/worst-rank by construction.
+    # They're excluded from metrics.json entirely; the map shows them as no-data. Kreis
+    # aggregation is unaffected since they contributed weight 0 to weighted means anyway.
+    df = df[df["ewz"] > 0].reset_index(drop=True)
 
     # Kreis fallback for missing values; track which metrics were filled
     df["kreis_key"] = df["ars"].str[:5]
@@ -202,14 +221,19 @@ def main() -> None:
         for ars in df.loc[df[m].notna(), "ars"]:
             filled.setdefault(ars, []).append(m)
 
+    # Deutschlandatlas Gemeinde-level population trend (native, no Kreis fallback)
+    bev = pd.read_csv(OUT / "bev_gemeinden.csv", dtype={"ars": str})
+    df = df.merge(bev, on="ars", how="left")
+
     amenities_path = OUT / "amenities.csv"
     has_amenities = amenities_path.exists()
     if has_amenities:
         am = pd.read_csv(amenities_path, dtype={"ars": str})
+        # Gemeinden with population but no amenities.csv row have genuinely unknown
+        # amenity density -- leave NaN rather than fabricating a 0 rate; they drop out
+        # of the m-dict (NaN-skip) and of the score's amenity component.
         df = df.merge(am, on="ars", how="left")
-        for m in AMENITY_METRICS:
-            df[m] = df[m].fillna(0.0)
-        df["amenities_1k"] = df[AMENITY_METRICS].sum(axis=1)
+        df["amenities_1k"] = df[AMENITY_METRICS].sum(axis=1, min_count=1)
 
     kreise_out = build_kreise(df, kreise, da, bauland, erreichbarkeit, has_amenities)
     WEB_DATA.mkdir(parents=True, exist_ok=True)
@@ -224,7 +248,10 @@ def main() -> None:
     parts = [pct_affordability, pct_market]
     if has_amenities:
         parts.append(pct_amenities)
-    df["score"] = (sum(parts) / len(parts) * 100).round(1)
+    # Row-wise mean of the non-null components -- a Gemeinde missing amenity data
+    # (NaN pct_amenities) still gets a score from its remaining components instead
+    # of losing its score entirely to a NaN-poisoned sum.
+    df["score"] = (pd.concat(parts, axis=1).mean(axis=1) * 100).round(1)
     df["p_affordability"] = pct_affordability.round(3)
     df["p_market"] = pct_market.round(3)
     df["p_amenities"] = pct_amenities.round(3)
@@ -236,6 +263,7 @@ def main() -> None:
         + DEUTSCHLANDATLAS_EXTRA_METRICS
         + BAULAND_METRICS
         + ERREICHBARKEIT_METRICS
+        + BEV_METRICS
         + ["score"]
     )
     out: dict[str, dict] = {}

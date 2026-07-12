@@ -23,7 +23,7 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
 
   return (
     <div className="scenario-panel">
-      <div className="metric-group-title">Mein Szenario</div>
+      <div className="metric-group-title">Szenario anpassen</div>
 
       <div className="scenario-row">
         <div className="scenario-row-label">
