@@ -8,13 +8,22 @@ import type { Dataset } from '../types'
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile)
 
-const SOURCE = 'gemeinden'
-const LAYER_FILL = 'gemeinden-fill'
-const LAYER_LINE = 'gemeinden-line'
-const LAYER_SELECTED = 'gemeinden-selected'
+// sharp zoom handoff between the two source layers: Kreis polygons below, Gemeinde polygons above
+const ZOOM_HANDOFF = 7.5
+
+const SOURCE_GEMEINDEN = 'gemeinden'
+const LAYER_FILL_GEMEINDEN = 'gemeinden-fill'
+const LAYER_LINE_GEMEINDEN = 'gemeinden-line'
+const LAYER_SELECTED_GEMEINDEN = 'gemeinden-selected'
+
+const SOURCE_KREISE = 'kreise'
+const LAYER_FILL_KREISE = 'kreise-fill'
+const LAYER_LINE_KREISE = 'kreise-line'
+const LAYER_SELECTED_KREISE = 'kreise-selected'
 
 interface Props {
   data: Dataset
+  dataK: Dataset
   metricId: string
   scale: Scale | null
   selected: string | null
@@ -22,16 +31,18 @@ interface Props {
   onSelect: (ars: string | null) => void
 }
 
-export default function MapView({ data, metricId, scale, selected, flyTarget, onSelect }: Props) {
+export default function MapView({ data, dataK, metricId, scale, selected, flyTarget, onSelect }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const loadedRef = useRef(false)
-  const hoverArs = useRef<string | null>(null)
+  const hoverRef = useRef<{ ars: string; source: string; sourceLayer: string } | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const metricRef = useRef(metricId)
   metricRef.current = metricId
   const dataRef = useRef(data)
   dataRef.current = data
+  const dataKRef = useRef(dataK)
+  dataKRef.current = dataK
   const scaleRef = useRef(scale)
   scaleRef.current = scale
 
@@ -60,9 +71,16 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
 
     map.on('load', () => {
-      map.addSource(SOURCE, {
+      map.addSource(SOURCE_GEMEINDEN, {
         type: 'vector',
         url: `pmtiles://${location.origin}${import.meta.env.BASE_URL}data/gemeinden.pmtiles`,
+        promoteId: 'ars',
+      })
+      // Kreis pmtiles may legitimately be missing (parallel pipeline task) — MapLibre tolerates a
+      // source whose tiles 404 by simply rendering nothing for it, so no extra guarding is needed here.
+      map.addSource(SOURCE_KREISE, {
+        type: 'vector',
+        url: `pmtiles://${location.origin}${import.meta.env.BASE_URL}data/kreise.pmtiles`,
         promoteId: 'ars',
       })
 
@@ -71,10 +89,11 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
 
       map.addLayer(
         {
-          id: LAYER_FILL,
+          id: LAYER_FILL_KREISE,
           type: 'fill',
-          source: SOURCE,
-          'source-layer': 'gemeinden',
+          source: SOURCE_KREISE,
+          'source-layer': 'kreise',
+          maxzoom: ZOOM_HANDOFF,
           paint: {
             'fill-color': 'rgba(0,0,0,0)',
             'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.95, 0.78],
@@ -84,10 +103,49 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
       )
       map.addLayer(
         {
-          id: LAYER_LINE,
+          id: LAYER_LINE_KREISE,
           type: 'line',
-          source: SOURCE,
+          source: SOURCE_KREISE,
+          'source-layer': 'kreise',
+          maxzoom: ZOOM_HANDOFF,
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 4.5, 0.2, 7.5, 0.8],
+            'line-opacity': 0.5,
+          },
+        },
+        firstSymbol,
+      )
+      map.addLayer({
+        id: LAYER_SELECTED_KREISE,
+        type: 'line',
+        source: SOURCE_KREISE,
+        'source-layer': 'kreise',
+        paint: { 'line-color': '#1d4ed8', 'line-width': 2.5 },
+        filter: ['==', ['get', 'ars'], ''],
+      })
+
+      map.addLayer(
+        {
+          id: LAYER_FILL_GEMEINDEN,
+          type: 'fill',
+          source: SOURCE_GEMEINDEN,
           'source-layer': 'gemeinden',
+          minzoom: ZOOM_HANDOFF,
+          paint: {
+            'fill-color': 'rgba(0,0,0,0)',
+            'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.95, 0.78],
+          },
+        },
+        firstSymbol,
+      )
+      map.addLayer(
+        {
+          id: LAYER_LINE_GEMEINDEN,
+          type: 'line',
+          source: SOURCE_GEMEINDEN,
+          'source-layer': 'gemeinden',
+          minzoom: ZOOM_HANDOFF,
           paint: {
             'line-color': '#ffffff',
             'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0.1, 9, 0.6, 12, 1.2],
@@ -97,27 +155,40 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
         firstSymbol,
       )
       map.addLayer({
-        id: LAYER_SELECTED,
+        id: LAYER_SELECTED_GEMEINDEN,
         type: 'line',
-        source: SOURCE,
+        source: SOURCE_GEMEINDEN,
         'source-layer': 'gemeinden',
         paint: { 'line-color': '#1d4ed8', 'line-width': 2.5 },
         filter: ['==', ['get', 'ars'], ''],
       })
 
-      map.on('mousemove', LAYER_FILL, (e) => {
+      registerLayerHandlers(map, LAYER_FILL_GEMEINDEN, SOURCE_GEMEINDEN, 'gemeinden')
+      registerLayerHandlers(map, LAYER_FILL_KREISE, SOURCE_KREISE, 'kreise')
+
+      loadedRef.current = true
+      applyFeatureState(map, SOURCE_GEMEINDEN, 'gemeinden', dataRef.current)
+      applyFeatureState(map, SOURCE_KREISE, 'kreise', dataKRef.current)
+      applyPaint(map)
+    })
+
+    function registerLayerHandlers(map: maplibregl.Map, layerId: string, sourceId: string, sourceLayer: string) {
+      map.on('mousemove', layerId, (e) => {
         const f = e.features?.[0]
         if (!f) return
         const ars = f.id as string
-        if (hoverArs.current && hoverArs.current !== ars) {
-          map.setFeatureState({ source: SOURCE, sourceLayer: 'gemeinden', id: hoverArs.current }, { hover: false })
+        if (hoverRef.current && (hoverRef.current.ars !== ars || hoverRef.current.source !== sourceId)) {
+          map.setFeatureState(
+            { source: hoverRef.current.source, sourceLayer: hoverRef.current.sourceLayer, id: hoverRef.current.ars },
+            { hover: false },
+          )
         }
-        map.setFeatureState({ source: SOURCE, sourceLayer: 'gemeinden', id: ars }, { hover: true })
-        hoverArs.current = ars
+        map.setFeatureState({ source: sourceId, sourceLayer, id: ars }, { hover: true })
+        hoverRef.current = { ars, source: sourceId, sourceLayer }
         map.getCanvas().style.cursor = 'pointer'
 
         const tip = tooltipRef.current!
-        const g = dataRef.current[ars]
+        const g = ars.length === 5 ? dataKRef.current[ars] : dataRef.current[ars]
         if (g) {
           const m = metricById(metricRef.current)
           const v = g.m[metricRef.current]
@@ -130,23 +201,22 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
           tip.style.transform = `translate(${e.point.x + 14}px, ${e.point.y + 14}px)`
         }
       })
-      map.on('mouseleave', LAYER_FILL, () => {
-        if (hoverArs.current) {
-          map.setFeatureState({ source: SOURCE, sourceLayer: 'gemeinden', id: hoverArs.current }, { hover: false })
-          hoverArs.current = null
+      map.on('mouseleave', layerId, () => {
+        if (hoverRef.current) {
+          map.setFeatureState(
+            { source: hoverRef.current.source, sourceLayer: hoverRef.current.sourceLayer, id: hoverRef.current.ars },
+            { hover: false },
+          )
+          hoverRef.current = null
         }
         map.getCanvas().style.cursor = ''
         tooltipRef.current!.style.display = 'none'
       })
-      map.on('click', LAYER_FILL, (e) => {
+      map.on('click', layerId, (e) => {
         const f = e.features?.[0]
         onSelect(f ? (f.id as string) : null)
       })
-
-      loadedRef.current = true
-      applyFeatureState(map, dataRef.current)
-      applyPaint(map)
-    })
+    }
 
     return () => {
       map.remove()
@@ -158,7 +228,13 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
 
   const applyPaint = (map: maplibregl.Map) => {
     const s = scaleRef.current
-    if (s) map.setPaintProperty(LAYER_FILL, 'fill-color', fillColorExpression(metricRef.current, s) as never)
+    if (s) {
+      // same scale for both layers (computed from the Gemeinde dataset) so color reads consistently
+      // across the zoom handoff between Kreis and Gemeinde polygons
+      const expr = fillColorExpression(metricRef.current, s) as never
+      map.setPaintProperty(LAYER_FILL_GEMEINDEN, 'fill-color', expr)
+      map.setPaintProperty(LAYER_FILL_KREISE, 'fill-color', expr)
+    }
   }
 
   useEffect(() => {
@@ -167,16 +243,24 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricId, scale])
 
-  // re-sync feature-state when the dataset changes in place (e.g. recomputed composite score)
+  // re-sync feature-state when a dataset changes in place (e.g. recomputed composite score)
   useEffect(() => {
     const map = mapRef.current
-    if (map && loadedRef.current) applyFeatureState(map, data)
+    if (map && loadedRef.current) applyFeatureState(map, SOURCE_GEMEINDEN, 'gemeinden', data)
   }, [data])
 
   useEffect(() => {
     const map = mapRef.current
+    if (map && loadedRef.current) applyFeatureState(map, SOURCE_KREISE, 'kreise', dataK)
+  }, [dataK])
+
+  useEffect(() => {
+    const map = mapRef.current
     if (map && loadedRef.current) {
-      map.setFilter(LAYER_SELECTED, ['==', ['get', 'ars'], selected ?? ''])
+      // a 5-digit Kreis ars never matches a Gemeinde feature and vice versa, so applying the same
+      // filter to both selected-outline layers is safe — only the relevant one ever lights up
+      map.setFilter(LAYER_SELECTED_GEMEINDEN, ['==', ['get', 'ars'], selected ?? ''])
+      map.setFilter(LAYER_SELECTED_KREISE, ['==', ['get', 'ars'], selected ?? ''])
     }
   }, [selected])
 
@@ -193,8 +277,8 @@ export default function MapView({ data, metricId, scale, selected, flyTarget, on
   )
 }
 
-function applyFeatureState(map: maplibregl.Map, data: Dataset) {
+function applyFeatureState(map: maplibregl.Map, source: string, sourceLayer: string, data: Dataset) {
   for (const [ars, g] of Object.entries(data)) {
-    map.setFeatureState({ source: SOURCE, sourceLayer: 'gemeinden', id: ars }, g.m)
+    map.setFeatureState({ source, sourceLayer, id: ars }, g.m)
   }
 }

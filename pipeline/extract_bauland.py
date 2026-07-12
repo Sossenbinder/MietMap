@@ -2,15 +2,21 @@
 
 Input:  data/inkar_baulandpreise_kreise.csv (long format:
             AGS;Kreisname;Jahr;Baulandpreis_EUR_m2)
-Output: data/out/bauland_kreise.csv (ars, bauland)
+Output: data/out/bauland_kreise.csv (ars, bauland) -- latest year only
+        ../web/public/data/bauland_history.json
+            {"<kreis5>": [[year, value], ...], ...} -- full time series,
+            sorted by year, values rounded to 1 decimal, NaN rows dropped
 """
 
+import json
 from pathlib import Path
 
 import pandas as pd
 
-DATA = Path(__file__).parent / "data"
+HERE = Path(__file__).parent
+DATA = HERE / "data"
 OUT = DATA / "out"
+WEB_DATA = HERE.parent / "web" / "public" / "data"
 
 YEAR = 2022
 
@@ -25,18 +31,25 @@ def to_num(s: pd.Series) -> pd.Series:
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
+    WEB_DATA.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_csv(DATA / "inkar_baulandpreise_kreise.csv", sep=";", encoding="utf-8")
-    df = df[df["Jahr"] == YEAR]
+    raw = pd.read_csv(DATA / "inkar_baulandpreise_kreise.csv", sep=";", encoding="utf-8")
+    raw = raw.assign(ars=kreis_key(raw["AGS"]), bauland=to_num(raw["Baulandpreis_EUR_m2"]))
 
-    out = pd.DataFrame(
-        {
-            "ars": kreis_key(df["AGS"]),
-            "bauland": to_num(df["Baulandpreis_EUR_m2"]),
-        }
-    )
+    latest = raw[raw["Jahr"] == YEAR]
+    out = latest[["ars", "bauland"]]
     out.to_csv(OUT / "bauland_kreise.csv", index=False)
     print(f"kreise ({YEAR}): {len(out)} (min: {out.bauland.min()}, max: {out.bauland.max()})")
+
+    hist_rows = raw.dropna(subset=["bauland"]).sort_values("Jahr")
+    history: dict[str, list[list]] = {}
+    for r in hist_rows.itertuples():
+        history.setdefault(r.ars, []).append([int(r.Jahr), round(r.bauland, 1)])
+
+    hist_path = WEB_DATA / "bauland_history.json"
+    with open(hist_path, "w") as f:
+        json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"bauland_history: {len(history)} kreise, size: {hist_path.stat().st_size / 1e3:.1f} KB")
 
 
 if __name__ == "__main__":

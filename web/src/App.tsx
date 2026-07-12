@@ -8,14 +8,17 @@ import SearchBox from './components/SearchBox'
 import WeightPanel, { type Weights } from './components/WeightPanel'
 import MapView from './map/MapView'
 import { METRICS, metricById } from './metrics'
+import { mapDataset, recomputeScenario, recomputeScore } from './recompute'
 import { computeScale } from './scale'
-import type { Dataset } from './types'
+import type { Dataset, Gemeinde } from './types'
 
 const SCENARIO_STORAGE_KEY = 'mietmap.scenario'
 const DEFAULT_SCENARIO: Scenario = {
   m2: 70,
   income: 2800,
   basis: 'bestand',
+  warm: false,
+  nk: 3.5,
   plot: 500,
   baukosten: 3200,
   eigenkapital: 100000,
@@ -28,16 +31,22 @@ const initialHash = new URLSearchParams(location.hash.slice(1))
 const initialMetric = initialHash.get('m')
 const initialArs = initialHash.get('g')
 
-type BaseScenario = Pick<Scenario, 'm2' | 'income' | 'basis'>
+type BaseScenario = Pick<Scenario, 'm2' | 'income' | 'basis' | 'warm' | 'nk'>
 type BauScenario = Pick<Scenario, 'plot' | 'baukosten' | 'eigenkapital' | 'zins' | 'jahre' | 'nebenkosten'>
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validateBaseScenario(v: any): BaseScenario | null {
-  if (typeof v?.m2 !== 'number' || typeof v?.income !== 'number' || (v?.basis !== 'bestand' && v?.basis !== 'neu')) {
+  if (
+    typeof v?.m2 !== 'number' ||
+    typeof v?.income !== 'number' ||
+    (v?.basis !== 'bestand' && v?.basis !== 'neu') ||
+    typeof v?.warm !== 'boolean' ||
+    typeof v?.nk !== 'number'
+  ) {
     return null
   }
-  if (v.m2 < 20 || v.m2 > 200 || v.income < 500 || v.income > 10000) return null
-  return { m2: v.m2, income: v.income, basis: v.basis }
+  if (v.m2 < 20 || v.m2 > 200 || v.income < 500 || v.income > 10000 || v.nk < 2 || v.nk > 6) return null
+  return { m2: v.m2, income: v.income, basis: v.basis, warm: v.warm, nk: v.nk }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,11 +86,13 @@ function validateBauScenario(v: any): BauScenario | null {
 function parseScenarioHash(): BaseScenario | null {
   const s = initialHash.get('s')
   if (!s) return null
-  const [m2Str, incomeStr, basisStr] = s.split(',')
+  const [m2Str, incomeStr, basisStr, warmStr, nkStr] = s.split(',')
   return validateBaseScenario({
     m2: Number(m2Str),
     income: Number(incomeStr),
     basis: basisStr === 'n' ? 'neu' : basisStr === 'b' ? 'bestand' : undefined,
+    warm: warmStr === 'w' ? true : warmStr === 'k' ? false : undefined,
+    nk: Number(nkStr),
   })
 }
 
@@ -119,6 +130,10 @@ const initialScenario: Scenario = {
 
 export default function App() {
   const [data, setData] = useState<Dataset | null>(null)
+  // Kreis-level overlay for low zoom; defaults to "loaded but empty" so a missing/failed fetch
+  // degrades to simply no Kreis layer instead of blocking or crashing the rest of the app.
+  const [dataK, setDataK] = useState<Dataset>({})
+  const [dataKLoaded, setDataKLoaded] = useState(false)
   const [metricId, setMetricId] = useState(() =>
     initialMetric && METRICS.some((m) => m.id === initialMetric) ? initialMetric : 'qm_miete',
   )
@@ -127,30 +142,49 @@ export default function App() {
   const [weights, setWeights] = useState<Weights>([33, 33, 33])
   const [scenario, setScenario] = useState<Scenario>(initialScenario)
 
+  // Kreis ars codes are 5 digits (a prefix of the 12-digit Gemeinde ars); Gemeinde/Kreis ids never collide.
+  function getEntry(ars: string): Gemeinde | undefined {
+    return ars.length === 5 ? dataK[ars] : (data?.[ars] ?? undefined)
+  }
+
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}data/metrics.json`)
       .then((r) => r.json())
       .then(setData)
   }, [])
 
-  // resolve the hash-provided selection once the dataset is available
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}data/metrics_kreise.json`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then(setDataK)
+      .catch(() => setDataK({}))
+      .finally(() => setDataKLoaded(true))
+  }, [])
+
+  // resolve the hash-provided selection once the dataset(s) it could refer to are available
   const initSelectionRef = useRef(false)
   useEffect(() => {
     if (!data || initSelectionRef.current) return
+    if (selected && selected.length === 5 && !dataKLoaded) return // could be a Kreis ars — wait for it
     initSelectionRef.current = true
-    if (selected && data[selected]) {
-      setFlyTarget({ center: data[selected].c, ts: Date.now() })
+    const entry = selected ? getEntry(selected) : undefined
+    if (selected && entry) {
+      setFlyTarget({ center: entry.c, ts: Date.now() })
     } else if (selected) {
       setSelected(null)
     }
-  }, [data, selected])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, dataK, dataKLoaded, selected])
 
   // keep the URL hash in sync with the current metric/selection/scenario
   useEffect(() => {
     const params = new URLSearchParams()
     params.set('m', metricId)
     if (selected) params.set('g', selected)
-    params.set('s', `${scenario.m2},${scenario.income},${scenario.basis === 'neu' ? 'n' : 'b'}`)
+    params.set(
+      's',
+      `${scenario.m2},${scenario.income},${scenario.basis === 'neu' ? 'n' : 'b'},${scenario.warm ? 'w' : 'k'},${scenario.nk}`,
+    )
     params.set(
       'b',
       `${scenario.plot},${scenario.baukosten},${scenario.eigenkapital},${scenario.zins},${scenario.jahre},${scenario.nebenkosten}`,
@@ -164,107 +198,29 @@ export default function App() {
   }, [scenario])
 
   // recompute the composite score client-side from percentile ranks whenever the weights change
+  // (applies to both the Gemeinde and Kreis datasets — Kreis entries carry "p" too, percentiles are
+  // computed within the Kreis set, which is intended)
   useEffect(() => {
     const t = setTimeout(() => {
-      setData((prev) => {
-        if (!prev) return prev
-        const sum = weights[0] + weights[1] + weights[2]
-        const w: Weights = sum === 0 ? [1, 1, 1] : weights
-        const wsum = w[0] + w[1] + w[2]
-        let changed = false
-        const next: Dataset = {}
-        for (const [ars, g] of Object.entries(prev)) {
-          if (!g.p) {
-            next[ars] = g
-            continue
-          }
-          const score = Math.round(((w[0] * g.p[0] + w[1] * g.p[1] + w[2] * g.p[2]) / wsum) * 100 * 10) / 10
-          if (g.m.score === score) {
-            next[ars] = g
-            continue
-          }
-          changed = true
-          next[ars] = { ...g, m: { ...g.m, score } }
-        }
-        return changed ? next : prev
-      })
+      setData((prev) => (prev ? mapDataset(prev, (g) => recomputeScore(g, weights)) : prev))
+      setDataK((prev) => mapDataset(prev, (g) => recomputeScore(g, weights)))
     }, 150)
     return () => clearTimeout(t)
   }, [weights])
 
-  // recompute the "Mein Szenario" metrics client-side, on load and whenever the scenario changes
+  // recompute the "Mein Szenario" metrics client-side, on load and whenever the scenario changes.
+  // Gemeinde data gates the effect (it's the primary dataset); dataKLoaded is also a dependency so
+  // the Kreis dataset gets its first pass once its own fetch settles, even without a scenario change.
   const dataLoaded = data != null
   useEffect(() => {
     if (!dataLoaded) return
     const t = setTimeout(() => {
-      setData((prev) => {
-        if (!prev) return prev
-        const validInputs = scenario.m2 > 0 && Number.isFinite(scenario.income) && scenario.income > 0
-        const validBauInputs = scenario.m2 > 0 && Number.isFinite(scenario.eigenkapital)
-        let changed = false
-        const next: Dataset = {}
-        for (const [ars, g] of Object.entries(prev)) {
-          const rentPerM2 = scenario.basis === 'bestand' ? g.m.qm_miete : g.m.angebotsmiete
-          const m = { ...g.m }
-          let monatsmiete: number | undefined
-          let belastung_pers: number | undefined
-          let rest_einkommen: number | undefined
-          let kauf_monat: number | undefined
-          let kauf_vs_miete: number | undefined
-          let geq = false
-
-          if (validInputs && rentPerM2 != null) {
-            monatsmiete = Math.round(rentPerM2 * scenario.m2)
-            belastung_pers = Math.round((monatsmiete / scenario.income) * 1000) / 10
-            rest_einkommen = Math.round(scenario.income - monatsmiete)
-            geq = scenario.basis === 'neu' && g.m.angebotsmiete === 12.5
-            m.monatsmiete = monatsmiete
-            m.belastung_pers = belastung_pers
-            m.rest_einkommen = rest_einkommen
-          } else {
-            delete m.monatsmiete
-            delete m.belastung_pers
-            delete m.rest_einkommen
-          }
-
-          if (validBauInputs && g.m.bauland != null) {
-            const price = g.m.bauland * scenario.plot + scenario.baukosten * scenario.m2
-            const loan = Math.max(0, price * (1 + scenario.nebenkosten / 100) - scenario.eigenkapital)
-            const r = scenario.zins / 100 / 12
-            const n = scenario.jahre * 12
-            kauf_monat = Math.round(loan === 0 ? 0 : (loan * r) / (1 - Math.pow(1 + r, -n)))
-            m.kauf_monat = kauf_monat
-            if (monatsmiete != null) {
-              kauf_vs_miete = kauf_monat - monatsmiete
-              m.kauf_vs_miete = kauf_vs_miete
-            } else {
-              delete m.kauf_vs_miete
-            }
-          } else {
-            delete m.kauf_monat
-            delete m.kauf_vs_miete
-          }
-
-          const same =
-            g.m.monatsmiete === monatsmiete &&
-            g.m.belastung_pers === belastung_pers &&
-            g.m.rest_einkommen === rest_einkommen &&
-            g.m.kauf_monat === kauf_monat &&
-            g.m.kauf_vs_miete === kauf_vs_miete &&
-            !!g.geq === geq
-          if (same) {
-            next[ars] = g
-            continue
-          }
-          changed = true
-          next[ars] = { ...g, m, geq }
-        }
-        return changed ? next : prev
-      })
+      setData((prev) => (prev ? mapDataset(prev, (g) => recomputeScenario(g, scenario)) : prev))
+      setDataK((prev) => mapDataset(prev, (g) => recomputeScenario(g, scenario)))
     }, 150)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario, dataLoaded])
+  }, [scenario, dataLoaded, dataKLoaded])
 
   const available = useMemo(() => {
     if (!data) return new Set<string>()
@@ -290,10 +246,13 @@ export default function App() {
     setFlyTarget({ center: data[ars].c, ts: Date.now() })
   }
 
+  const selectedEntry = selected ? getEntry(selected) : undefined
+
   return (
     <div className="app">
       <MapView
         data={data}
+        dataK={dataK}
         metricId={metricId}
         scale={scale}
         selected={selected}
@@ -320,8 +279,8 @@ export default function App() {
         />
       </div>
 
-      {selected && data[selected] && (
-        <DetailPanel gemeinde={data[selected]} onClose={() => setSelected(null)} />
+      {selected && selectedEntry && (
+        <DetailPanel gemeinde={selectedEntry} ars={selected} onClose={() => setSelected(null)} />
       )}
     </div>
   )

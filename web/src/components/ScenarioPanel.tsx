@@ -2,6 +2,8 @@ export interface Scenario {
   m2: number
   income: number
   basis: 'bestand' | 'neu'
+  warm: boolean
+  nk: number
   plot: number
   baukosten: number
   eigenkapital: number
@@ -78,6 +80,41 @@ export default function ScenarioPanel({ scenario, metricId, onChange }: Props) {
           Neuvermietung basiert auf Kreis-Klassenmitten (BBSR); in Hochpreis-Kreisen (Klasse „11,50 € und mehr“) ist
           die echte Miete meist höher.
         </div>
+      )}
+
+      <div className="scenario-toggle">
+        <button
+          className={`metric-btn ${!scenario.warm ? 'active' : ''}`}
+          onClick={() => onChange({ ...scenario, warm: false })}
+        >
+          Kaltmiete
+        </button>
+        <button
+          className={`metric-btn ${scenario.warm ? 'active' : ''}`}
+          onClick={() => onChange({ ...scenario, warm: true })}
+        >
+          Warmmiete
+        </button>
+      </div>
+
+      {scenario.warm && (
+        <>
+          <div className="scenario-row">
+            <div className="scenario-row-label">
+              <span>Nebenkosten-Pauschale</span>
+              <span className="scenario-row-value">{scenario.nk.toFixed(1)} €/m²</span>
+            </div>
+            <input
+              type="range"
+              min={2}
+              max={6}
+              step={0.25}
+              value={scenario.nk}
+              onChange={(e) => onChange({ ...scenario, nk: Number(e.target.value) })}
+            />
+          </div>
+          <div className="legend-note">Warmmiete = Kaltmiete + Pauschale; Angaben ohne Heizkosten-Garantie.</div>
+        </>
       )}
 
       {showBau && (

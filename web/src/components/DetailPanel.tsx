@@ -1,13 +1,43 @@
+import { useEffect, useState } from 'react'
 import { METRICS, SCENARIO_METRIC_IDS, fmtMetric, fmtNumber, scenarioBoundPrefix } from '../metrics'
 import type { Gemeinde } from '../types'
+import Sparkline from './Sparkline'
 
 interface Props {
   gemeinde: Gemeinde
+  ars: string
   onClose: () => void
 }
 
-export default function DetailPanel({ gemeinde: g, onClose }: Props) {
+type BaulandHistory = Record<string, [number, number][]>
+
+// fetched lazily, once, and cached across every DetailPanel mount
+let baulandHistoryPromise: Promise<BaulandHistory> | null = null
+function loadBaulandHistory(): Promise<BaulandHistory> {
+  if (!baulandHistoryPromise) {
+    baulandHistoryPromise = fetch(`${import.meta.env.BASE_URL}data/bauland_history.json`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .catch(() => ({}))
+  }
+  return baulandHistoryPromise
+}
+
+export default function DetailPanel({ gemeinde: g, ars, onClose }: Props) {
   const groups = [...new Set(METRICS.map((m) => m.group))]
+  const [history, setHistory] = useState<BaulandHistory | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    loadBaulandHistory().then((h) => {
+      if (!cancelled) setHistory(h)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const baulandSeries = history?.[ars.slice(0, 5)]
+
   return (
     <aside className="detail">
       <button className="detail-close" onClick={onClose} aria-label="Schließen">
@@ -44,6 +74,15 @@ export default function DetailPanel({ gemeinde: g, onClose }: Props) {
           </section>
         )
       })}
+
+      {baulandSeries && baulandSeries.length > 1 && (
+        <section>
+          <h3>
+            Baulandpreis {baulandSeries[0][0]}–{baulandSeries[baulandSeries.length - 1][0]} (Kreis)
+          </h3>
+          <Sparkline data={baulandSeries} />
+        </section>
+      )}
     </aside>
   )
 }

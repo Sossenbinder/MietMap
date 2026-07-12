@@ -22,6 +22,7 @@ Interaktive Karte: Nettokaltmieten, Wohnungsmarkt und Lebensqualität für alle
 | OpenStreetMap (Geofabrik) | Supermärkte, Ärzte, Apotheken, Schulen/Kitas, ÖPNV-Halte je 1.000 Einw. | Gemeinde |
 | Deutschlandatlas (BBSR) | Verfügbares Einkommen, Angebotsmieten (Klassenmitten), daraus Miet-Gap & Mietbelastung | Kreis |
 | INKAR (BBSR) | Baulandpreise €/m² (Kaufwerte-Statistik, 2022) | Kreis |
+| INKAR (BBSR) | Fahrzeit zum nächsten Mittel-/Oberzentrum (Pkw-Minuten, 2021) | Kreis |
 
 Der Miet-Gap (Angebotsmiete − Bestandsmiete) wird in den 46 Kreisen der offenen
 Spitzenklasse („11,50 € und mehr") unterdrückt, weil die Klassenmitte dort die

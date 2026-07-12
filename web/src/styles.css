@@ -503,6 +503,31 @@ body {
   color: var(--text);
 }
 
+/* ---------- sparkline ---------- */
+
+.sparkline-labels,
+.sparkline-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.sparkline-labels {
+  margin-bottom: 2px;
+}
+
+.sparkline-ticks {
+  margin-top: 2px;
+}
+
+.sparkline-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* ---------- map bits ---------- */
 
 .tooltip {
