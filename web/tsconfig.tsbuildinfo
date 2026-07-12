@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/metrics.ts","./src/scale.ts","./src/types.ts","./src/components/DetailPanel.tsx","./src/components/Legend.tsx","./src/components/MetricPicker.tsx","./src/components/Ranking.tsx","./src/components/ScenarioPanel.tsx","./src/components/SearchBox.tsx","./src/components/WeightPanel.tsx","./src/map/MapView.tsx"],"version":"5.8.3"}
